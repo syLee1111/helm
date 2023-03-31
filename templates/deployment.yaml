@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "test-app.fullname" . }}
+  labels:
+  {{- include "test-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.testApp.replicas }}
+    # strategy:
+    #type: Recreate
+  selector:
+    matchLabels:
+    {{- include "test-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "test-app.selectorLabels" . | nindent 8 }}
+    spec:
+      nodeSelector:
+        eks.amazonaws.com/nodegroup: {{ .Values.nodeGroup.node }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - {{ include "test-app.fullname" . }}
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - command:
+        - /opt/test-app/start.sh
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: configmap_servertype
+          valueFrom:
+            configMapKeyRef:
+              key: configmap_servertype
+              name: {{ include "test-app.fullname" . }}
+        - name: configmap_instancehome
+          valueFrom:
+            configMapKeyRef:
+              key: configmap_instancehome
+              name: {{ include "test-app.fullname" . }}
+        - name: configmap_appuser
+          valueFrom:
+            configMapKeyRef:
+              key: configmap_appuser
+              name: {{ include "test-app.fullname" . }}
+        - name: configmap_Xms
+          valueFrom:
+            configMapKeyRef:
+              key: configmap_Xms
+              name: {{ include "test-app.fullname" . }}
+        - name: configmap_Xmx
+          valueFrom:
+            configMapKeyRef:
+              key: configmap_Xmx
+              name: {{ include "test-app.fullname" . }}
+        - name: configmap_NewSize
+          valueFrom:
+            configMapKeyRef:
+              key: configmap_NewSize
+              name: {{ include "test-app.fullname" . }}
+        - name: configmap_MaxNewSize
+          valueFrom:
+            configMapKeyRef:
+              key: configmap_MaxNewSize
+              name: {{ include "test-app.fullname" . }}
+        - name: secret_encryptkey
+          valueFrom:
+            secretKeyRef:
+              key: secret_encryptkey
+              name: {{ include "test-app.fullname" . }}
+        image: {{ .Values.testApp.testApp.image.repository }}:{{ .Values.testApp.testApp.image.tag
+          | default .Chart.AppVersion }}
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /test/api
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: {{ .Values.Containers.name }}
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /test/api
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            memory: {{ .Values.podReq.mem | quote }}
+            cpu: {{ .Values.podReq.cpu | quote }}
+          limits:
+            memory: {{ .Values.podLim.mem | quote }}
+            cpu: {{ .Values.podLim.cpu | quote }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/test-app/log
+          name: logs
+        - mountPath: /opt/jennifer/agent5/logs
+          name: jennifer-logs
+        - mountPath: /opt/scouter/agent.host/logs
+          name: scouter-logs
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /var/log/app/test-app
+          type: DirectoryOrCreate
+        name: logs
+      - hostPath:
+          path: /var/log/jennifer/
+          type: DirectoryOrCreate
+        name: jennifer-logs
+      - hostPath:
+          path: /var/log/scouter
+          type: DirectoryOrCreate
+        name: scouter-logs

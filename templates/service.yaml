@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "test-app.fullname" . }}
+  labels:
+  {{- include "test-app.labels" . | nindent 4 }}
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+    alb.ingress.kubernetes.io/healthcheck-path: /test/api
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthy-threshold-count: "5"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+spec:
+  type: {{ .Values.testApp.type }}
+  selector:
+    app.kubernetes.io/name: test-app
+  {{- include "test-app.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.testApp.ports | toYaml | nindent 2 -}}
