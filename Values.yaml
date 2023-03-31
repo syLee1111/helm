@@ -1,0 +1,75 @@
+applConfigmap:
+  configmapAppuser: root
+  configmapInstancehome: /opt/test-app
+  configmapMaxNewSize: 1536m
+  configmapNewSize: 1536m
+  configmapServertype: StgEks
+  configmapXms: 4096m
+  configmapXmx: 4096m
+applSecret:
+  secretEncryptkey: ""
+testApp:
+  testApp:
+    image:
+      repository: ***************
+      tag: g4233
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 31000
+  replicas: 3
+  type: NodePort
+
+service:
+  type: NodePort
+  port: 80
+
+ingress:
+  enabled: true
+  className: ""
+  listener:
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: instance
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+      alb.ingress.kubernetes.io/load-balancer-name: k8s-test1-app-stg
+      alb.ingress.kubernetes.io/security-groups: sg-*****
+      alb.ingress.kubernetes.io/target-node-labels: eks.amazonaws.com/nodegroup=test-WAS
+      alb.ingress.kubernetes.io/subnets: *****************
+      ## SSL Settings
+      #alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      #alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-1:346556****:certificate/df32as-dff3423-a2
+      #alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+
+
+    hosts:
+      - host: ""
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+
+
+nodeGroup:
+  node: test-WAS
+
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  averageUtilization: 80
+
+podReq:
+  cpu: 500m
+  mem: 500Mi
+  cpu: 3200m
+  mem: 1000Mi
+podLim:
+  cpu: 3600m
+  mem: 10000Mi
+  cpu: 1500m
+  mem: 4000Mi
+
+Containers:
+  name: test1-app
